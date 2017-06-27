@@ -1,5 +1,8 @@
 # ec-router
-An auto router middleware for koa2
+An auto router middleware for koa2 
+
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](http://opensource.org/licenses/MIT)
+
 
 ## feature
 1. router middleware for koa2
@@ -38,7 +41,7 @@ route by Uri and request method like **RequestMethod /res/[:id]**
 if controller not exists method named **[RequestMethod]**, then look for **[all]** method. 
 
 
-###type=2
+### type=2
 
 route by Path like **/controller/action**
 
@@ -46,7 +49,7 @@ route by Path like **/controller/action**
 
 **[/User/add]**  route to controller=User.js,method=add
 
-###type=3
+### type=3
 
 route by QueryString like **/api?c=controller&a=action**
 
@@ -54,7 +57,7 @@ route by QueryString like **/api?c=controller&a=action**
 
 **[/?c=User&a=add]**  route to controller=User.js,method=add
 
-## use
+## Usage
 
 ### koa app main
 
@@ -117,6 +120,9 @@ module.exports = {
 ```
 
 
-##
+## License
 
+MIT is open-sourced software licensed under the [MIT license](http://opensource.org/licenses/MIT).
+
+##
 Forgot my ugly english, and enjoy it~!
