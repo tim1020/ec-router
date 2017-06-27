@@ -1,0 +1,28 @@
+{
+  "name": "ec-router",
+  "version": "1.0.0",
+  "description": "An auto router for koa2 , support RESTful、path、querystring",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tim1020/ec-router.git"
+  },
+  "keywords": [
+    "auto",
+    "router",
+    "koa2",
+    "RESTful",
+    "mvc",
+    "middleware",
+    "codeless"
+  ],
+  "author": "Tim <tim8670@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tim1020/ec-router/issues"
+  },
+  "homepage": "https://github.com/tim1020/ec-router#readme"
+}
