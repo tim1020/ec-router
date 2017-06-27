@@ -56,8 +56,18 @@ class EcRouter {
         let controllers = controller.load(cDir)
 
         return async (ctx, next) => {
-            let uri         = ctx.request.path == '/' ? this.config.uriDefault : ctx.request.path
+            let uri = ctx.request.path == '/' ? this.config.uriDefault : ctx.request.path
             log.d('uri='+uri)
+
+            let reqMethod = ctx.request.method.toLowerCase()
+            log.d('reqMethod='+reqMethod)
+            if(this.config.allowMethod.indexOf(reqMethod) == -1){ 
+                ctx.response.status  = 405
+                ctx.response.message = 'Method Not Allowed -- '+ ctx.request.method
+                await next()
+                return
+            }
+
             if(this.config.uriPrefix != ''){ //remove prefix if uriPrefix】not empty
                 if(uri.indexOf(this.config.uriPrefix) !== 0){ //404 prefix not found
                     ctx.response.status  = 404
@@ -68,6 +78,7 @@ class EcRouter {
                     uri = uri.replace(this.config.uriPrefix,'')
                 }
             }
+            
             let path      = uri.split("/")
             let resource  = path[1] || ""  //resource or controllerName
             let action    = path[2] || ""  //action or resourceId
@@ -75,11 +86,10 @@ class EcRouter {
 
             if(this.config.type == 1){
                 let resourceId = action || 0
-                action = ctx.request.method.toLowerCase()
                 if(controllers[resource]){ 
                     let c = controllers[resource]
-                    if(c[action]){
-                        c[action](ctx)
+                    if(c[reqMethod]){
+                        c[reqMethod](ctx)
                         await next()
                         return
                     }else if(c.all){
@@ -89,15 +99,11 @@ class EcRouter {
                     }
                 }
                 //not custom, auto RESTful service
-                log.d("not custom,default handler -- method="+action+",resource="+resource)
-                if(this.config.allowMethod.indexOf(action) == -1){ 
-                    ctx.response.status  = 405
-                    ctx.response.message = 'Method Not Allowed -- '+ ctx.request.method
-                }else{
-                    ctx.response.status = 404
-                    ctx.response.message = 'Not Found'
-                    //todo: auto RESTful service
-                }
+                log.d("not custom controller,default handler -- method="+reqMethod+",resource="+resource)
+                
+                //todo: auto RESTful service
+                ctx.response.status = 404
+                ctx.response.message = 'Not Found'
             }else{ //Path or QueryString
                 if(this.config.type == 3){ //querystring,reParse resource,action
                     if(path.length != 2 || resource != this.config.uriApiName){
