@@ -3,7 +3,6 @@ An auto router middleware for koa2
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](http://opensource.org/licenses/MIT)
 
-Usage
 
 ## feature
 1. router middleware for koa2
