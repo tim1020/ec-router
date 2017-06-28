@@ -26,9 +26,9 @@ or download from git  [https://github.com/tim1020/ec-router]
 
 ### type=1
 
-route by Uri and request method like **RequestMethod /res/[:id]**
+route by Uri and request method like **RequestMethod /res/[:resourceId]**
 
-**/res** is resource name as controller fileName
+**/res** is resource name (table name)
 
 **RequestMethod** as controller action,like get,post,put,delete etc.
 
@@ -87,10 +87,14 @@ app.listen(3000)
 
 > put controller file into [AppRoot]/controllers/
 
+> controller filename、action Uri and table resource Name is Case Sensitive 
+
 ```
 //user.js
 module.exports = {
     get : (ctx) => {
+		//ctx.req.resourceId  //effective when type=1,
+        //ctx.req.resource
         ctx.body = "get User"
     },
     post: (ctx) => {
@@ -118,7 +122,9 @@ module.exports = {
     allowMethod     : ['get','post','put','delete'] //allowed request method whitelist
 }
 ```
+## see
 
+[mysql pool](https://github.com/mysqljs/mysql#pool-options)
 
 ## License
 

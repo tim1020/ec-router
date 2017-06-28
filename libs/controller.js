@@ -4,12 +4,12 @@ const path  = require("path")
 const log   = require('./log')
 
 exports.load = function (directory) {
-    log.d(">>>loadController from "+ directory)
+    log.d("--loadController--")
+    log.d({dir: directory})
     let controllerFiles =  fs.readdirSync(directory).filter(f => {
         return f.endsWith('.js')
     })
-    log.d('controllerFiles >>')
-    log.d(controllerFiles)
+    log.d({files:controllerFiles})
     let result = {} 
     for (let k in controllerFiles) {
         let f = controllerFiles[k]
@@ -17,7 +17,6 @@ exports.load = function (directory) {
         let actions = require(directory+'/'+f)
         result[resource] = actions
     }
-    log.d('result >>')
-    log.d(result)
+    log.d({result:result})
     return result
 };
