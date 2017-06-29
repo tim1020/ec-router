@@ -1,9 +1,6 @@
-# ec-router
+# ec-router [![License](https://img.shields.io/badge/license-MIT-blue.svg)](http://opensource.org/licenses/MIT)
 
-An auto router middleware for koa2 
-
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](http://opensource.org/licenses/MIT)
-
+An auto router middleware for koa2 [中文版文档点这里](https://github.com/tim1020/ec-router/blob/master/README_CN.md)
 
 ## feature
 
