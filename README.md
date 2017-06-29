@@ -1,10 +1,12 @@
 # ec-router
+
 An auto router middleware for koa2 
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](http://opensource.org/licenses/MIT)
 
 
 ## feature
+
 1. router middleware for koa2
 2. auto route
     
@@ -24,7 +26,7 @@ or download from git  [https://github.com/tim1020/ec-router]
 
 ## route type
 
-### type=1
+### [RESTful] type=1
 
 route by Uri and request method like **RequestMethod /res/[:resourceId]**
 
@@ -41,7 +43,7 @@ route by Uri and request method like **RequestMethod /res/[:resourceId]**
 if controller not exists method named **[RequestMethod]**, then look for **[all]** method. 
 
 
-### type=2
+### [by Path] type=2
 
 route by Path like **/controller/action**
 
@@ -49,15 +51,16 @@ route by Path like **/controller/action**
 
 **[/User/add]**  route to controller=User.js,method=add
 
-### type=3
+### [by QueryString] type=3
 
-route by QueryString like **/api?c=controller&a=action**
+route by QueryString like **/apiName?c=controller&a=action**
 
 **[/?c=User&a=list]**  route to controller=User.js,method=list 
 
 **[/?c=User&a=add]**  route to controller=User.js,method=add
 
 ## Usage
+
 
 ### koa app main
 
@@ -67,8 +70,11 @@ const Koa = require('koa')
 const app = new Koa()
 const ecRouter = require('ec-router')
 
+process.env.NODE_ENV = 'dev' //to open debug log
+
 //use other middleware
-//app.use(bodyParser())
+//if need auto RESTful service, bodyParser is required before ec-router
+app.use(bodyParser())
 
 //change default config
 ecRouter.setConfig({
@@ -85,7 +91,7 @@ app.listen(3000)
 
 ### controller
 
-> put controller file into [AppRoot]/controllers/
+> put controller file into [AppRoot]/controllers/ (can modify in config)
 
 > controller filename、action Uri and table resource Name is Case Sensitive 
 
@@ -120,11 +126,80 @@ module.exports = {
     uriDefault      : '/index',         //reset Uri when path="/"
     controllerPath  : 'controllers',    //set controller files path (relative app root)
     allowMethod     : ['get','post','put','delete'] //allowed request method whitelist
+    tbPrefix        : 'res_',           //the tableName prefix of RESTful service's resrouce
+    dbConf          : {                 //auto RESTful service db
+        driver: 'mysql',
+        connectionLimit : ,
+        host            : '',
+        port            : ,
+        user            : '',
+        password        : '',
+        database        : ''
+    }
+    //see [mysql pool](https://github.com/mysqljs/mysql#pool-options) for more
+}
+
+
+```
+
+## auto RESTful service
+
+if need auto RESTful service, set config of:
+
+```
+type:1
+tbPrefix:'res_'
+dbConf:{
+    
 }
 ```
-## see
 
-[mysql pool](https://github.com/mysqljs/mysql#pool-options)
+the RESTful request handle:
+
+1. search controller and action, exec this action and return if found
+2. If not found, build SQL by request param、request method、querystring ,then exec this SQL and return results
+
+SQL build examples :
+
+**[GET /task]**  
+
+SELECT * FROM res_task
+
+**[GET /task/12]** 
+
+SELECT * FROM res_task WHERE id=12
+
+**[POST /task]**
+
+INSERT INTO res_task SET k=v,k=v (k,v is the request.body key paris)
+
+**[PUT /task/12]**
+
+UPDATE res_task SET k=v,k=v WHERE id=12
+
+**[DELETE /task/12]**
+
+DELETE res_task WHERE id=12
+
+
+> PUT,DELETE must set /resurce/[:resourceId]
+
+> PUT,POST need request.body key paris, so you need to use bodyParser before ec-router
+
+
+
+GET can set WHERE,ORDER,LIMIT,FIELDS by querystring like:
+
+```
+GET /task/?where=xxx&order=xxx&limit=xxx
+
+where="cond1 and cond2 [or] cond3 [and] cond4 or cond5" // (cond1 and cond2) or cond3 and (cond4 or cond5)
+
+order="field1,field2 desc"
+
+limit="[offset,]nums"  //if not limit,default 100 is set
+
+```
 
 ## License
 
