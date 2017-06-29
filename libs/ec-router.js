@@ -84,6 +84,11 @@ class EcRouter {
             let uri = ctx.request.path == '/' ? this.config.uriDefault : ctx.request.path
             let reqMethod = ctx.request.method.toLowerCase()
             log.d({method:reqMethod,uri:uri})
+            
+            if(uri.toLowerCase()  == '/favicon.ico'){
+                await next()
+                return
+            }
 
             if(this.config.allowMethod.indexOf(reqMethod) == -1){ 
                 ctx.response.status  = 405
