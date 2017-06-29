@@ -32,6 +32,12 @@ let config = {
      * {
      *  driver: 'mysql' //or mongodb...
      *  //other conf see driver package
+     *  connectionLimit : ,
+    *   host            : '',
+    *   port            : ,
+    *   user            : '',
+    *   password        : '',
+    *   database        : ''
      * }
      */
     dbConf          : {}, 

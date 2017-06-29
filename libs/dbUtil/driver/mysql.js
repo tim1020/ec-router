@@ -80,11 +80,63 @@ const parseLimit = (limit) => {
     }
     return offset == 0 ? num : offset+","+num
 }
-
+//conds for where
+const parseConds = (cond) => {
+    let reg = /(>=|<=|=|>|<| is not | is | in )/i
+    let str = cond.split(reg)
+    if(str.length != 3) {
+        throw error("ERR_COND_FAIL:"+cond)
+    }
+    let k = str[0].trim()
+    let o = str[1].trim()
+    let v = str[2].trim()
+    let ou = o.toUpperCase()
+    let vu = v.toUpperCase()
+    if(ou == 'IS' || ou == 'IS NOT'){
+        if(vu != 'NULL'){
+            throw error("ERR_COND_FAIL:is only for NULL or NOT NULL")
+        }
+        v= undefined
+    }
+    if(ou == 'IN'){
+        v =  v.split(",")
+    }
+    return sqlstring.format("?? "+o+" ?",[k,[v]])
+}
+//where cond1 and cond2 or cond3[and]cond4[or]cond5 and cond6..
+//=> (cond1 and cond2 or cond3) and cond4 or (cond5 and cond6)
+//cond => field[op]val ,op=>(>=,<=,=,>,<,is,in)
 const parseWhere = (where) => {
-
-
-
+    log.d({where: where})
+    let r1 = /(\[and\]|\[or\])/i 
+    let r2 = /( and | or )/i
+    let sl1 = where.split(r1)
+    let result = []
+    for(let i in sl1){
+        let str1 = sl1[i].trim()
+        let str1_u = str1.toUpperCase()
+        if(str1_u == '[AND]' || str1_u == '[OR]'){
+            result.push(str1_u.replace(/(\[|\])/g,''))
+        }else{
+            let sl2 = str1.split(r2)
+            if(sl2.length > 1){
+                result.push("(")
+                for(let j in sl2){
+                    let str2 = sl2[j].trim()
+                    let str2_u = str2.toUpperCase()
+                    if(str2_u == 'AND' || str2_u == 'OR'){
+                        result.push(str2_u)
+                    }else{
+                        result.push(parseConds(sl2[j]))
+                    }
+                }
+                 result.push(")")
+            }else{
+                result.push(parseConds(sl2[0]))
+            }
+        }
+    }
+    return result.join(" ")
 }
 
 const buildSQL = (method,res,resId, data, params) => {
@@ -110,8 +162,7 @@ const buildSQL = (method,res,resId, data, params) => {
             if(resId){ 
                 sql += sqlstring.format(" WHERE `id` = ?",resId)
             }else if(params['where']){ //使用where指定
-                //let wh = parseWhere(params['where'])
-                //sql += wh
+                sql += " WHERE "+parseWhere(params['where'])
             }
             if(params['order']){
                 sql += " ORDER BY "+ parseOrder(params['order'])
