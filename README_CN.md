@@ -2,7 +2,7 @@
 
 一个易用的koa2路由中间件，提供规则路由功能，不再需要复杂无趣的路由文件，路由影射表等。
 
-同时提供无代码自动实现RESTful服务的功能。
+同时提供无代码自动实现RESTful服务的功能（已支持使用mysql或者mongodb作为存储）
 
 
 ## 安装
@@ -133,7 +133,7 @@ module.exports = {
     allowMethod     : ['get','post','put','delete'] //允许的请求方法
     tbPrefix        : 'res_',           //使用自动RESTful时，数据表名称前缀
     dbConf          : {                 //使用自动RESTful时所用的数据连接配置
-        driver: 'mysql',				//使用的数据驱动，目录只支持mysql
+        driver: 'mysql',				//使用的数据驱动，支持mysql 或者 mongodb
         connectionLimit : ,
         host            : '',
         port            : ,
@@ -211,13 +211,21 @@ DELETE res_task WHERE id=12
 ```
 GET /task/?where=xxx&order=xxx&limit=xxx
 
-where="cond1 and cond2 [or] cond3 [and] cond4 or cond5" // (cond1 and cond2) or cond3 and (cond4 or cond5)
-
-order="field1,field2 desc"
-
-limit="[offset,]nums"  //当未设置limit，且没有where条件(有指定resourceId仅使用where id=:resourceId)，系统默认设置limit值,避免错误的返回了大量数据
-
 ```
+
+> fields=a,b alias_b,c as alias_c //mongodb不支持别名方式
+
+> order=field1,field2 desc
+
+> limit=[offset,]nums  //当未设置limit，且没有where条件(有指定resourceId仅使用where id=:resourceId)，系统默认设置limit值,避免错误的返回了大量数据
+
+> where条件待完善
+
+> where=cond1 and cond2 [or] cond3 [and] cond4 or cond5 // (cond1 and cond2) or cond3 and (cond4 or cond5)
+
+> where=cond1,cond2,cond3 //mongodb暂时只支持and条件
+
+> 其中，cond表达式为 字段=值，目前支持的运算符包括： >=,>,<=,<,=, !=,<>, in
 
 ## License
 

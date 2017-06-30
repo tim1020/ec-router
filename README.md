@@ -11,7 +11,7 @@ An auto router middleware for koa2 [中文版文档点这里](https://github.com
     
 3. auto RESTful service
     
-    build  RESTful Api server codeless
+    build  RESTful Api server auto, use mysql or mongeodb
 
 ## install
 
@@ -27,7 +27,7 @@ or download from git  [https://github.com/tim1020/ec-router]
 
 route by Uri and request method like **RequestMethod /res/[:resourceId]**
 
-**/res** is resource name (table name)
+**/res** is resource name (table name or mongodb's collection)
 
 **RequestMethod** as controller action,like get,post,put,delete etc.
 
@@ -190,13 +190,22 @@ GET can set WHERE,ORDER,LIMIT,FIELDS by querystring like:
 ```
 GET /task/?where=xxx&order=xxx&limit=xxx
 
-where="cond1 and cond2 [or] cond3 [and] cond4 or cond5" // (cond1 and cond2) or cond3 and (cond4 or cond5)
-
-order="field1,field2 desc"
-
-limit="[offset,]nums"  //if not limit,default 100 is set
-
 ```
+
+>
+
+> order=field1,field2 desc
+
+> limit=[offset,]nums  //if not limit,default 100 is set
+
+> fields=a,b alias_b,c as alias_c   //alias only for mysql
+
+
+>where="cond1 and cond2 [or] cond3 [and] cond4 or cond5" // (cond1 and cond2) or cond3 and (cond4 or cond5)
+
+> for mongodb,where=cond1,cond2,cond3 // "，" means "and"
+
+
 
 ## License
 
