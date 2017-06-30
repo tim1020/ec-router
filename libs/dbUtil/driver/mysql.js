@@ -3,24 +3,8 @@
 const mysql     = require('mysql')
 const sqlstring = require('sqlstring')
 const log       = require('../../log')
+const myutil    = require('../common')
 
-const CUS_ERR_CODE      = 9999
-const CUS_DEFAULT_LIMIT = 100
-
-
-const error = (err) => {
-    return {errno:CUS_ERR_CODE , code:err,toString:()=>{return "[custom err] "+err}}
-}
-const checkData = (data) => {
-    if(typeof data !== 'object' || JSON.stringify(data) === '{}' ){
-        throw error("ER_REQUEST_DATA_EMPTY")
-    }
-}
-const checkResId = (resId) => {
-    if(!resId){ //todo: resource id only numeric?
-        throw error("ER_RESOURCE_ID_MISS")
-    }
-}
 //fields=field1,field2 alias,field3 as alias3
 const parseFields = (fields) => {
     log.d({fields:fields})
@@ -35,7 +19,7 @@ const parseFields = (fields) => {
         }else if(f.length == 3 && f[1].toUpperCase() == 'AS'){
             fieldStr.push(sqlstring.escapeId(f[0])+" "+ sqlstring.escapeId(f[2]))
         }else{
-            throw error("ERR_PARSE_FIELDS_PARAM")
+            throw myutil.error("ERR_PARSE_FIELDS_PARAM")
         }
     }
     return fieldStr.join(",")
@@ -55,7 +39,7 @@ const parseOrder = (order) => {
                 let k = field.substr(0,pos)
                 let d = field.substr(pos).trim().toUpperCase()
                 if(d != 'DESC' && d != 'ASC'){
-                    throw error("ERR_PARSE_ORDER_PARAM")
+                    throw myutil.error("ERR_PARSE_ORDER_PARAM")
                 }
                 orderStr.push(sqlstring.escapeId(k)+" "+ d)
         }
@@ -76,16 +60,16 @@ const parseLimit = (limit) => {
         offset  = parseInt(nums[0])
     }
     if(isNaN(num) ||isNaN(offset) || nums.length > 2){
-        throw error("ERR_PARSE_LIMIT_PARAM")
+        throw myutil.error("ERR_PARSE_LIMIT_PARAM")
     }
     return offset == 0 ? num : offset+","+num
 }
 //conds for where
 const parseConds = (cond) => {
-    let reg = /(>=|<=|=|>|<| is not | is | in )/i
+    let reg = /(>=|<=|<>|!=|=|>|<| is not | is | in )/i
     let str = cond.split(reg)
     if(str.length != 3) {
-        throw error("ERR_COND_FAIL:"+cond)
+        throw myutil.error("ERR_COND_FAIL:"+cond)
     }
     let k = str[0].trim()
     let o = str[1].trim()
@@ -94,7 +78,7 @@ const parseConds = (cond) => {
     let vu = v.toUpperCase()
     if(ou == 'IS' || ou == 'IS NOT'){
         if(vu != 'NULL'){
-            throw error("ERR_COND_FAIL:is only for NULL or NOT NULL")
+            throw myutil.error("ERR_COND_FAIL:is only for NULL or NOT NULL")
         }
         v= undefined
     }
@@ -143,14 +127,14 @@ const buildSQL = (method,res,resId, data, params) => {
     //todo: desc table, get res info to help check data
     switch(method){
         case 'post':
-            checkData(data)
+            myutil.checkData(data)
             return sqlstring.format("INSERT INTO ?? SET ?",[res,data])
         case 'put':
-            checkResId(resId)
-            checkData(data)
+            myutil.checkResId(resId)
+            myutil.checkData(data)
             return sqlstring.format("UPDATE ?? set ? where `id`=?",[res,data,resId])
         case 'delete':
-            checkResId(resId)
+            myutil.checkResId(resId)
             return sqlstring.format("DELETE FROM ?? WHERE `id` = ?",[res,resId])
         case 'get':
             let selectFields = "*"
@@ -170,11 +154,11 @@ const buildSQL = (method,res,resId, data, params) => {
             if(params['limit']){
                 sql += " LIMIT "+ parseLimit(params['limit'])
             }else{ //set default
-                sql += " LIMIT "+ CUS_DEFAULT_LIMIT
+                sql += " LIMIT "+ myutil.CUS_DEFAULT_LIMIT
             }
             return sql
         default:
-            throw error("REQUEST METHOD NOT MATCH")
+            throw myutil.error("REQUEST METHOD NOT MATCH")
     }
 }
 

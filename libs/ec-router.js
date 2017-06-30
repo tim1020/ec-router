@@ -30,14 +30,14 @@ let config = {
      * db config,set if need auto RESTful service 
      * @type {[object]}
      * {
-     *  driver: 'mysql' //or mongodb...
+     *  driver: 'mysql' 
      *  //other conf see driver package
      *  connectionLimit : ,
-    *   host            : '',
-    *   port            : ,
-    *   user            : '',
-    *   password        : '',
-    *   database        : ''
+     *   host            : '',
+     *   port            : ,
+     *   user            : '',
+     *   password        : '',
+     *   database        : ''
      * }
      */
     dbConf          : {}, 
@@ -73,14 +73,10 @@ class EcRouter {
         let cDir        = path.dirname(require.main.filename) + '/'+ this.config.controllerPath;
         let controllers = controller.load(cDir)
         let dbUtil = null
-        if(this.config.type == 1 && this.config.dbConf.driver){
-            log.d("--db init--")
-            log.d({dbconf:this.config.dbConf})
-            dbUtil = require('./dbUtil').init(this.config.dbConf)
-        }
 
         return async (ctx, next) => {
             log.d("--on request--")
+               
             let uri = ctx.request.path == '/' ? this.config.uriDefault : ctx.request.path
             let reqMethod = ctx.request.method.toLowerCase()
             log.d({method:reqMethod,uri:uri})
@@ -137,25 +133,29 @@ class EcRouter {
                         return
                     }
                 }
+
                 log.d("custom controller not match")
-                //not custom, auto RESTful service
-                if(dbUtil){
-                    log.d("--auto RESTful service handler--")
-                    let tbName = this.config.tbPrefix + resource
+                if(this.config.dbConf.driver){ //auto RESTful on
+                    log.d("--Auto RESTful on "+this.config.dbConf.driver+"--")
                     try{
+                        if(dbUtil == null){
+                            log.d("--db init--")
+                            log.d({dbconf:this.config.dbConf})
+                            dbUtil = await require('./dbUtil').init(this.config.dbConf)
+                            log.d("--db init finished--")
+                        }
+                        let tbName = this.config.tbPrefix + resource
                         log.d('--query begin--')
-                        log.d({db:this.config.dbConf.driver})
+                        log.d({tbname:tbName})
                         let data = await dbUtil.exec(reqMethod, tbName, resourceId, ctx.request)
                         log.d('--query finished--')
                         ctx.body = {code:0, data:data}
                     }catch(e){
+                        console.log(e)
                         log.d('sql error:'+ e.toString())
                         //ctx.response.status = 500
-                        ctx.response.body = {code: "0x"+e.errno,error:e.code}
+                        ctx.response.body = {code: "0x"+ e.errno, error:e.code}
                     }
-                }else{
-                    log.d('!!! db init fail !!!')
-                    log.d("!!! auto RESTful service not work !!!")
                 }
             }else{ //Path or QueryString
                 if(this.config.type == 3){ //querystring,reParse resource,action

@@ -1,7 +1,7 @@
 {
   "name": "ec-router",
-  "version": "1.0.0",
-  "description": "An auto router for koa2 , support RESTful、path、querystring",
+  "version": "1.0.3",
+  "description": "An auto router and auto RESTful middlewware for koa2    ####### 自动化的koa路由中间件，支持MVC模式，直接根椐请求路径路由到指定的controller，同时支持基于MYSQL或mongoDB的自动RESTful服务，无需编写业务代码",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -11,13 +11,17 @@
     "url": "git+https://github.com/tim1020/ec-router.git"
   },
   "keywords": [
-    "auto",
-    "router",
-    "koa2",
-    "RESTful",
-    "mvc",
+    "koa",
     "middleware",
-    "codeless"
+    "router",
+    "route",
+    "auto route",
+    "RESTful",
+    "auto RESTful",
+    "mvc",
+    "controller",
+    "mysql",
+    "mongodb"
   ],
   "author": "Tim <tim8670@gmail.com>",
   "license": "MIT",
@@ -26,6 +30,7 @@
   },
   "homepage": "https://github.com/tim1020/ec-router#readme",
   "dependencies": {
+    "mongodb": "^2.2.29",
     "mysql": "^2.13.0",
     "sqlstring": "^2.2.0"
   }
