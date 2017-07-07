@@ -16,7 +16,6 @@ let dbConf = {
     database        : 'ec_demo'
 }
 
-app.use(logger())
 app.use(bodyParser())
 
 
