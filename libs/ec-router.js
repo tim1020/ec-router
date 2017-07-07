@@ -24,6 +24,7 @@ let config = {
     uriPrefix       : '', //start with "/",or empty string
     uriDefault      : '/index',
     controllerPath  : 'controllers', //set controller files path (relative app root), default is 'controllers'
+    controllerHook  : '_hook', //controller hook name
     allowMethod     : ['get','post','put','delete'],
     tbPrefix        : 'res_',
     /**
@@ -119,19 +120,28 @@ class EcRouter {
                 if(controllers[resource]){ 
                     log.d("found controller file")
                     let c = controllers[resource]
-                    if(c[reqMethod]){
-                        c[reqMethod](ctx)
+
+                    if(c[reqMethod] || c.all){
+                        if(!c[reqMethod]){ //not reqMethod,match "all"
+                            log.d("reqMethod "+reqMethod+" rewrite to 'all'")
+                            reqMethod = 'all'
+                        }
                         log.d("route ok")
                         log.d({controller:resource,action:reqMethod})
+
+                        if(controllers[this.config.controllerHook].before){ //hook before
+                            log.d('--onbefore controller--')
+                            controllers[this.config.controllerHook].before(ctx)
+                        }
+                        log.d('--call controller action--')
+                        c[reqMethod](ctx)
+                        if(controllers[this.config.controllerHook].after){ //hook after
+                            log.d('--onafter controller--')
+                            controllers[this.config.controllerHook].after(ctx)
+                        }
                         await next()
                         return
-                    }else if(c.all){
-                        c.all(ctx)
-                        log.d("route ok")
-                        log.d({controller:resource,action:'all'})
-                        await next()
-                        return
-                    }
+                    } 
                 }
 
                 log.d("custom controller not match")
@@ -151,7 +161,6 @@ class EcRouter {
                         log.d('--query finished--')
                         ctx.body = {code:0, data:data}
                     }catch(e){
-                        console.log(e)
                         log.d('sql error:'+ e.toString())
                         //ctx.response.status = 500
                         ctx.response.body = {code: "0x"+ e.errno, error:e.code}
@@ -173,11 +182,24 @@ class EcRouter {
                 log.d({resource:resource, action:action})
                 if(controllers[resource]){ 
                     let c = controllers[resource]
-                    if(c[action]){
-                        c[action](ctx)
+                    if(c[action] || c.all){
+                        if(!c[action]){ //action not found, rewrite to "all"
+                            log.d("action "+action+" not found, rewrite to 'all'")
+                            action = 'all'
+                        }
                         log.d("route ok")
                         log.d({controller:resource,action:action})
-                    }else{
+                        if(controllers[this.config.controllerHook].before){ //hook before
+                            log.d('--onbefore controller--')
+                            controllers[this.config.controllerHook].before(ctx)
+                        }
+                        log.d('--call controller--')
+                        c[action](ctx)
+                        if(controllers[this.config.controllerHook].after){ //hook after
+                            log.d('--onafter controller--')
+                            controllers[this.config.controllerHook].after(ctx)
+                        }                      
+                    }else{ //404
                         ctx.response.status  = 404
                         ctx.response.message = 'Not Found -- action('+action+') not exists'
                         log.d("action not exists")
