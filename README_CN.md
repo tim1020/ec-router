@@ -31,12 +31,16 @@ PUT /user/11
 
 当请求同名方法和all方法都找不到，如果开启了自动RESTful服务，会进入到自动处理逻辑（下文进行说明），否则，响应404。
 
+> 自动RESTful只支持POST/DELETE/PUT/GET方法，分别对应数据的增删改查
+
 
 ### type=2,Path方式
 
 本方式根椐路径匹配控制器和控制器方法, path的格式为： /controller/action
 
-当收到请求后，中间件会查找并执行对应的控制器及对应的方法，如果没匹配到，则响应404。
+当收到请求后，中间件会查找并执行对应的controller及其action，如果没找到，会尝试在控制器中查找名叫"all"的方法
+
+当action和all都没找到，则响应404。
 
 如:
 
@@ -44,13 +48,15 @@ PUT /user/11
 
 **/user/add** 路由到 controller=user,method=add
 
+**/user**    路由到 controller=user,method=all
+
 
 该方法不区分请求方法，可在实现控制器时自动判断
 
 
 ### type=3,QueryString方式
 
-本方式使用请求字符串进行路由判断，比如：**/apiName?c=controller&a=action**
+本方式使用请求字符串进行路由判断，比如：**/apiName?c=controller&a=action**,查找controller及action的方式同type=2
 
 (其中c,a为参数名称，可在config中修改)
 
@@ -60,9 +66,9 @@ PUT /user/11
 
 **[/?c=User&a=add]**  路由到 controller=User.js,method=add
 
+**[/?c=User&a=]**  路由到 controller=User.js,method=all
 
 此方法同样不区分请求方法，在实现控制器时由开发都进行判断处理
-
 
 ## 使用
 
@@ -96,9 +102,13 @@ app.listen(3000)
 
 ### controller
 
-> 默认地，需要将控制器文件放置在APP根目录下的contrillers目录，可在配置中修改
+> 默认地，需要将控制器文件放置在APP根目录下的controllers目录，可在配置中修改
 
 > 控制器文件名、控制器方法、资源名称等大小写敏感
+
+> 控制器方法的函数原型是 (ctx) =>{} , ctx是koa2本身的ctx，如果type=1，ec-router会在ctx.req上面绑定resource和resrouceId
+
+> type=1时,使用get,post,put,delete,all来命名对应的控制器方法，type非1时，可以自行定义（对应path或querystring中的action命称）
 
 ```
 // controllers/user.js
@@ -117,6 +127,30 @@ module.exports = {
 }
 ```
 
+### controller钩子
+
+如果需要在每个控制器方法执行之前或之行都执行一些逻辑，可以使用钩子，方法是：
+
+1. 在 controllers目录下放置控制器钩子,默认文件名为 _hook.js (名字可以通过在配置controllerHook来修改)
+2. 在_hook.js中实现并导出before或after方法(可同时或单独前后添加钩子)
+
+```
+
+module.exports = {
+    //do before all controller action
+    before : (ctx) => {
+        console.log('controller start')
+    },
+
+    //do after all controller action
+    after: (ctx) => {
+        console.log('controller finish')
+    },
+}
+
+```
+
+
 ### config
 
 > 可以在调用ec-router.dispatcher之前使用setConfig来修改默认配置.
@@ -130,8 +164,9 @@ module.exports = {
     uriPrefix       : '',               //API路径前缀，如: /prefix/controller/action
     uriDefault      : '/index',         //默认uri
     controllerPath  : 'controllers',    //控制器文件所在目录，相对于app根目录
-    allowMethod     : ['get','post','put','delete'] //允许的请求方法
-    tbPrefix        : 'res_',           //使用自动RESTful时，数据表名称前缀
+    controllerHook  : '_hook',			//控制器钩子名称
+	allowMethod     : ['get','post','put','delete'] //允许的请求方法
+    tbPrefix        : 'res_',           //使用自动RESTful时，数据表名称前缀,该前缀与资源名共同组成mysql的表名或mongodb的collection
     dbConf          : {                 //使用自动RESTful时所用的数据连接配置
         driver: 'mysql',				//使用的数据驱动，支持mysql 或者 mongodb
         connectionLimit : ,
@@ -153,7 +188,6 @@ module.exports = {
 
 ```
 type:1
-tbPrefix:'res_'
 dbConf:{
     
 }
@@ -165,11 +199,11 @@ dbConf:{
 
 整个RESTful请求的处理步骤如下：
 
-1. 根椐请求方法和资源名称，查找对应的控制器及控制器方法，如果能找到，则执行它并返回。
+1. 根椐请求路径解析出资源名称，查找以资源名称命名的控制器，并在里面查找以请求方法命名的控制器方法，如果能找到，则执行它并返回。
 2. 如果找不到对应的方法，尝试查找名为"all"的控制器方法，如果找到，则执行该方法并返回。
 3. 找不到控制器方法时，如果开启了自动RESTful服务（设置了有效的dbConf），中间件根椐请求方法、请求参数，自动构建相应的SQL语句，执行并返回结果
 
-### 请求例子和生成的SQL
+### 请求例子和生成的SQL （for mysql）
 
 **[GET /task]**  
 

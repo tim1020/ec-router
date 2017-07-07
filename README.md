@@ -7,7 +7,7 @@ An auto router middleware for koa2 [中文版文档点这里](https://github.com
 1. router middleware for koa2
 2. auto route
     
-    route by rule, route file、mapper table is No longer needed 
+    route by rule of uri, route file、mapper table is No longer needed 
     
 3. auto RESTful service
     
@@ -27,7 +27,7 @@ or download from git  [https://github.com/tim1020/ec-router]
 
 route by Uri and request method like **RequestMethod /res/[:resourceId]**
 
-**/res** is resource name (table name or mongodb's collection)
+**/res** is resource name (table name or mongodb's collection with [tbPrefix])
 
 **RequestMethod** as controller action,like get,post,put,delete etc.
 
@@ -42,7 +42,7 @@ if controller not exists method named **[RequestMethod]**, then look for **[all]
 
 ### [by Path] type=2
 
-route by Path like **/controller/action**
+route by Path like **/controller/action**, if controller not exists method named **[action]**, then look for **[all]** method. 
 
 **[/User/list]**  route to controller=User.js,method=list 
 
@@ -50,11 +50,12 @@ route by Path like **/controller/action**
 
 ### [by QueryString] type=3
 
-route by QueryString like **/apiName?c=controller&a=action**
+route by QueryString like **/apiName?c=controller&a=action**, if controller not exists method named **[action]**, then look for **[all]** method. 
 
 **[/?c=User&a=list]**  route to controller=User.js,method=list 
 
 **[/?c=User&a=add]**  route to controller=User.js,method=add
+
 
 ## Usage
 
@@ -67,7 +68,7 @@ const Koa = require('koa')
 const app = new Koa()
 const ecRouter = require('ec-router')
 
-process.env.NODE_ENV = 'dev' //to open debug log
+process.env.NODE_ENV = 'dev' //open debug log
 
 //use other middleware
 //if need auto RESTful service, bodyParser is required before ec-router
@@ -88,7 +89,9 @@ app.listen(3000)
 
 ### controller
 
-> put controller file into [AppRoot]/controllers/ (can modify in config)
+> put controller file into [AppRoot]/controllers/ 
+	
+	(can modify in config)
 
 > controller filename、action Uri and table resource Name is Case Sensitive 
 
@@ -109,6 +112,27 @@ module.exports = {
 }
 ```
 
+### controller hook
+
+if you want to do something before or after every controller action, build a hook controller name  "_hook.js", and exported method "before"、"after" 
+
+```
+module.exports = {
+    //do before all controller action
+    before : (ctx) => {
+        console.log('controller start')
+    },
+
+    //do after all controller action
+    after: (ctx) => {
+        console.log('controller finish')
+    },
+}
+```
+
+> "_hook" can be modify use confing **[controllerHook]** 
+
+
 ### config
 
 > You can change default config by ***ecRouter.setConfig*** method
@@ -122,10 +146,11 @@ module.exports = {
     uriPrefix       : '',               //the Uri prefix,eg. [/api]/resource,if set,start with "/"
     uriDefault      : '/index',         //reset Uri when path="/"
     controllerPath  : 'controllers',    //set controller files path (relative app root)
-    allowMethod     : ['get','post','put','delete'] //allowed request method whitelist
+    controllerHook  : '_hook',			//controller hook name
+	allowMethod     : ['get','post','put','delete'] //allowed request method whitelist
     tbPrefix        : 'res_',           //the tableName prefix of RESTful service's resrouce
     dbConf          : {                 //auto RESTful service db
-        driver: 'mysql',
+        driver: 'mysql',				//mysql or mongodb
         connectionLimit : ,
         host            : '',
         port            : ,
@@ -145,7 +170,6 @@ if need auto RESTful service, set config of:
 
 ```
 type:1
-tbPrefix:'res_'
 dbConf:{
     
 }
