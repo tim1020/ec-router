@@ -13,6 +13,8 @@ An auto router middleware for koa2 [中文版文档点这里](https://github.com
     
     build  RESTful Api server auto, use mysql or mongeodb
 
+4. hook before or after controller 
+
 ## install
 
 ```
@@ -106,17 +108,27 @@ module.exports = {
     post: (ctx) => {
         ctx.body = "post user"
     },
+    //You can call an other action use ctx.go()
+    go: (ctx) => {
+        //ctx.go('user','get') //ctx.go('controller','action')
+        ctx.go('get') //ctx.go('action')
+
+        //other code will go on
+    },
+    //method "all" will match all of action
     all: (ctx) => {
         //other method
     }
 }
 ```
 
+
 ### controller hook
 
 if you want to do something before or after every controller action, build a hook controller name  "_hook.js", and exported method "before"、"after" 
 
 ```
+//_hook.js
 module.exports = {
     //do before all controller action
     before : (ctx) => {

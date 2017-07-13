@@ -110,7 +110,9 @@ app.listen(3000)
 
 > type=1时,使用get,post,put,delete,all来命名对应的控制器方法，type非1时，可以自行定义（对应path或querystring中的action命称）
 
+
 ```
+
 // controllers/user.js
 module.exports = {
     get : (ctx) => {
@@ -121,10 +123,19 @@ module.exports = {
     post: (ctx) => {
         ctx.body = "post user"
     },
+    //可以在控制器方法中使用ctx.go()来进行内部重定向
+    go:(ctx) => {
+        //ctx.go('user','list') //ctx.go('controller','action')
+        ctx.go('list') //ctx.go('action')
+
+        //后面代码会继续执行（如果有的话）
+    },
+    //当action无法匹配以上方法时，会自动匹配为all方法
     all: (ctx) => {
         //other method
     }
 }
+
 ```
 
 ### controller钩子

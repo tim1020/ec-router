@@ -83,7 +83,6 @@ class EcRouter {
             log.d({method:reqMethod,uri:uri})
             
             if(uri.toLowerCase()  == '/favicon.ico'){
-                await next()
                 return
             }
 
@@ -91,15 +90,12 @@ class EcRouter {
                 ctx.response.status  = 405
                 ctx.response.message = 'Method Not Allowed -- '+ ctx.request.method
                 log.d("method not allowed")
-                await next()
                 return
             }
 
             if(this.config.uriPrefix != ''){ //remove prefix if uriPrefix】not empty
                 if(uri.indexOf(this.config.uriPrefix) !== 0){ //404 prefix not found
-                    ctx.response.status  = 404
-                    ctx.response.message = 'Not Found -- uri prefix('+this.config.uriPrefix+') not exists'
-                    await next()
+                    log.d('uri prefix not exists -- '+ this.config.uriPrefix)
                     return
                 }else{ 
                     uri = uri.replace(this.config.uriPrefix,'')
@@ -109,6 +105,26 @@ class EcRouter {
             let path      = uri.split("/")
             let resource  = path[1] || ""  //resource or controllerName
             let action    = path[2] || ""  //action or resourceId
+            //inter redirect
+            ctx.go = ( ...params) => {
+                log.d("ctx.go called, params="+params.join(","))
+                if(params.length == 1){
+                    action = params[0]
+                }else if(params.length == 2){
+                    resource = params[0]
+                    action   = params[1]
+                }else{
+                    throw new Error('ctx.go params error, except go(action) or go(control,action)',500);
+                }
+                if(controllers[resource]){ 
+                    let c = controllers[resource]
+                    if(c[action]){
+                        c[action](ctx)
+                        return
+                    }
+                }
+                log.d("ctx.go target not found -- controller="+resource+",action="+action)
+            }
 
             if(this.config.type == 1){
                 log.d('--RESTful route--')
@@ -169,9 +185,7 @@ class EcRouter {
             }else{ //Path or QueryString
                 if(this.config.type == 3){ //querystring,reParse resource,action
                     if(path.length != 2 || resource != this.config.uriApiName){
-                        ctx.response.status  = 404
-                        ctx.response.message = 'Not Found -- api name('+this.config.uriApiName+') not exists'
-                        await next()
+                        log.d('api name not exists -- '+ this.config.uriApiName)
                         return
                     }
                     let params = ctx.request.query
@@ -200,14 +214,10 @@ class EcRouter {
                             controllers[this.config.controllerHook].after(ctx)
                         }                      
                     }else{ //404
-                        ctx.response.status  = 404
-                        ctx.response.message = 'Not Found -- action('+action+') not exists'
-                        log.d("action not exists")
+                        log.d("action not exists -- "+ action)
                     }
                 }else{
-                    ctx.response.status  = 404
-                    ctx.response.message = 'Not Found -- controller('+resource+') not exists'
-                    log.d("controller not exists")
+                    log.d("controller not exists -- " + resource)
                 }
                 //Path and QueryString not support auto service
             }
