@@ -4,7 +4,7 @@ module.exports = {
     },
     lst : (ctx) => {
         ctx.go('get')
-    }
+    },
     all:(ctx) => {
         //match all other,if need auto RESTful,reomve this action
     }

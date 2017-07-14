@@ -1,11 +1,12 @@
 module.exports = {
     //do before all controller action
     before : (ctx) => {
-        console.log('controller start')
+        ctx.myHeader = 'before_'
     },
 
     //do after all controller action
     after: (ctx) => {
-        console.log('controller finish')
+        ctx.myHeader += '_after'
+        ctx.set('_hook',ctx.myHeader)
     },
 }
