@@ -4,7 +4,6 @@
  * An auto & easy router for koa2
  */
 
-const path        = require('path')
 const log         = require('./log')
 const controller  = require('./controller')
 const mysql       = require('mysql')
@@ -71,7 +70,7 @@ class EcRouter {
         if([1,2,3].indexOf(this.config.type) == -1){ //not supported type,throw error
             throw new Error('route type unexpected',500);
         }
-        let cDir        = path.dirname(require.main.filename) + '/'+ this.config.controllerPath;
+        let cDir        = process.cwd() + '/'+ this.config.controllerPath;
         let controllers = controller.load(cDir)
         let dbUtil = null
 
