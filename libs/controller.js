@@ -12,9 +12,13 @@ exports.load = function (directory) {
     log.d({files:controllerFiles})
     let result = {} 
     for (let k in controllerFiles) {
-        let f = controllerFiles[k]
+        let f        = controllerFiles[k]
+        let fullPath = directory+'/'+f
         let resource = path.basename(f,'.js')
-        let actions = require(directory+'/'+f)
+        let resPath  = require.resolve(fullPath);
+        require.cache[resPath] && (require.cache[resPath] = null);
+        let actions = require(fullPath)
+        //todo: check actions
         result[resource] = actions
     }
     log.d({result:result})

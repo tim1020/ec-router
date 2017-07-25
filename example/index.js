@@ -6,25 +6,17 @@ const app = new Koa()
 
 process.env.NODE_ENV = 'dev'
 
-let dbConf = {
-    driver          : 'mysql',
-    connectionLimit : 2,
-    host            : '127.0.0.1',
-    port            : 3306,
-    user            : 'root',
-    password        : '',
-    database        : 'ec_demo'
-}
-
 app.use(bodyParser())
 
-
-
+/**
 ecRouter.setConfig({
     dbConf:dbConf,
     tbPrefix:'',
     //allowMethod:['get','head']
 })
+*/
+
+ecRouter.loadConfig('./ec-config.js')
 app.use(ecRouter.dispatcher())
 
 app.listen(3000)

@@ -14,6 +14,7 @@ An auto router middleware for koa2 [中文版文档点这里](https://github.com
     build  RESTful Api server auto, use mysql or mongeodb
 
 4. hook before or after controller 
+5. hot reload config and controllers
 
 ## install
 
@@ -88,6 +89,11 @@ app.use(ecRouter.dispatcher())
 app.listen(3000)
 
 ```
+
+### hot reload
+
+ec-router support hot reload config and controller, if you want to use this feature, set ```hotLoad=true``` (default), and write a config module ,then use ```ecRouter.loadConfig('./config.js')``` replace ```ecRouter.setConfig(conf)```
+
 
 ### controller
 

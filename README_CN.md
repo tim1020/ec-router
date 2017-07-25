@@ -9,6 +9,8 @@
 
 ```
 npm install ec-router --save
+npm test
+
 ```
 
 也可从 [git仓库](https://github.com/tim1020/ec-router) 中下载源码，放到node_modules目录
@@ -99,6 +101,12 @@ app.use(ecRouter.dispatcher())
 app.listen(3000)
 
 ```
+
+### 热加载
+
+当在配置文件中设置了hotLoad=true(缺省值)时，ec-router支持配置文件及controller的热加载(hotLoad配置的修改不支持热更新)
+
+如果需要使用热加载，请将配置独立成模块，再使用 ```ecRouter.loadConfig('./config.js')``` 代替 ```ecRouter.setConfig(conf)```
 
 ### controller
 
