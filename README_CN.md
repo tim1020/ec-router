@@ -1,6 +1,6 @@
 # ec-router [![License](https://img.shields.io/badge/license-MIT-blue.svg)](http://opensource.org/licenses/MIT)
 
-一个易用的koa2路由中间件，提供规则路由功能，不再需要复杂无趣的路由文件，路由影射表等。
+一个简单易用的koa2路由中间件，提供规则路由功能，不再需要复杂无趣的路由文件，路由影射表等。
 
 同时提供无代码自动实现RESTful服务的功能（已支持使用mysql或者mongodb作为存储）
 
@@ -14,6 +14,14 @@ npm test
 ```
 
 也可从 [git仓库](https://github.com/tim1020/ec-router) 中下载源码，放到node_modules目录
+
+## URI格式说明
+
+``` http://domain[:port]/[prefix]/[apiver]/path```
+
+**[prefix]** : 表示路径前缀（可为空），一般用来在同一服务器部署时区分不同的应用，可在config中设置
+**[apiver]** : 表示api的版本，在config中设置 apiVer 为true时生效，版本规则由apiVeRegex定义，默认规则为两位版本号，比如v1.0,v11,v2,11,12.22
+**path** : 为具体资源路径，根椐不同的路由类型有不同
 
 ## 路由类型(使用type参数设置)
 
@@ -90,10 +98,7 @@ process.env.NODE_ENV = 'dev' //开启debug log
 app.use(bodyParser())
 
 //修改ec-router的默认配置
-ecRouter.setConfig({
-    type:1,
-    allowMethod:['Get','POST']
-})
+ecRouter.loadConfig('/home/code/koa/ec-config.js')
 app.use(ecRouter.dispatcher())
 
 //use other middleware
@@ -111,6 +116,10 @@ app.listen(3000)
 ### controller
 
 > 默认地，需要将控制器文件放置在APP根目录下的controllers目录，可在配置中修改
+
+> 如果开启了apiVer，则需在controllers目录下创建版本目录，并将控制文件放到相应的版本目录，如 : /v1/res，会路由到 controllers/v1/res.js。
+
+> 如果新版本继承了旧版本的大量方法，可以用require导入原版本，再重新某个特定方法。
 
 > 控制器文件名、控制器方法、资源名称等大小写敏感
 
@@ -153,6 +162,8 @@ module.exports = {
 1. 在 controllers目录下放置控制器钩子,默认文件名为 _hook.js (名字可以通过在配置controllerHook来修改)
 2. 在_hook.js中实现并导出before或after方法(可同时或单独前后添加钩子)
 
+注：钩子是全局的，使用版本时，所有版本共用外层的钩子定义。
+
 ```
 
 module.exports = {
@@ -172,7 +183,7 @@ module.exports = {
 
 ### config
 
-> 可以在调用ec-router.dispatcher之前使用setConfig来修改默认配置.
+> 可以在调用ec-router.dispatcher之前使用loadConfig来修改默认配置（config文件只需定义不使用默认值的项）
 
 ```
 {
@@ -182,6 +193,8 @@ module.exports = {
     uriAParam       : 'a',              //使用querystring方式时，指定控制器方法的参数名
     uriPrefix       : '',               //API路径前缀，如: /prefix/controller/action
     uriDefault      : '/index',         //默认uri
+    apiVer          : false,            //是否支持版本声明
+    apiVeRegex      : /^v?(\d){1,2}(\.[\d]{1,2})?$/, //版本规则,
     controllerPath  : 'controllers',    //控制器文件所在目录，相对于app根目录
     controllerHook  : '_hook',			//控制器钩子名称
 	allowMethod     : ['get','post','put','delete'] //允许的请求方法

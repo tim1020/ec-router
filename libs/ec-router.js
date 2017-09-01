@@ -23,6 +23,8 @@ let config = {
     uriAParam       : 'a',
     uriPrefix       : '', //start with "/",or empty string
     uriDefault      : '/index',
+    apiVer          : false, //api version required ?
+    apiVeRegex      : /^v?(\d){1,2}(\.[\d]{1,2})?$/, //api version regex
     controllerPath  : 'controllers', //set controller files path (relative app root), default is 'controllers'
     controllerHook  : '_hook', //controller hook name
     allowMethod     : ['get','post','put','delete'],
@@ -95,14 +97,16 @@ class EcRouter {
         if([1,2,3].indexOf(config.type) == -1){ //not supported type,throw error
             throw new Error('route type unexpected',500);
         }
+        let apiVerRegex = null
+        
         let cDir     = process.cwd() + '/'+ config.controllerPath;
-        let controllers  = controller.load(cDir)
+        let cFiles  = controller.load(cDir)
         //hot load
         if(config.hotLoad){
             fs.watch(cDir, {recursive:true}, (event,filename) => {
                 log.d('--controller hot reload--')
                 try{
-                    controllers = controller.load(cDir)
+                    cFiles = controller.load(cDir)
                 }catch(e){
                     log.d('[err] loadController fail, '+ e.toString())
                 }
@@ -130,7 +134,7 @@ class EcRouter {
                 return
             }
 
-            if(config.uriPrefix != ''){ //remove prefix if uriPrefix】not empty
+            if(config.uriPrefix != ''){ //remove prefix if uriPrefix not empty
                 if(uri.indexOf(config.uriPrefix) !== 0){ //404 prefix not found
                     log.d('uri prefix not exists -- '+ config.uriPrefix)
                     return
@@ -138,9 +142,29 @@ class EcRouter {
                     uri = uri.replace(config.uriPrefix,'')
                 }
             }
-            
+            let controllers = cFiles
             let path      = uri.split("/")
-            let [, resource, action] = path
+            let apiVer    = ''
+            path.shift()
+            if(config.apiVer && config.apiVeRegex){
+                if(!config.apiVeRegex.test(path[0])){
+                    log.d("api version not match")
+                    ctx.response.message = 'api version not match'
+                    await next()
+                    return
+                }
+                //test ok
+                apiVer = path.shift()
+                if(!cFiles[apiVer]){
+                    log.d("this version api not found")
+                    ctx.response.message = 'api not found, check version pls'
+                    await next()
+                    return
+                }
+                controllers = cFiles[apiVer]
+            }
+            log.d('api ver ='+apiVer)
+            let [resource, action] = path
             //inter redirect
             ctx.go = ( ...params) => {
                 log.d("ctx.go called, params="+params.join(","))
@@ -239,15 +263,15 @@ class EcRouter {
                         }
                         log.d("route ok")
                         log.d({controller:resource,action:action})
-                        if(controllers[config.controllerHook].before){ //hook before
+                        if(cFiles[config.controllerHook].before){ //hook before
                             log.d('--onbefore controller--')
-                            controllers[config.controllerHook].before(ctx)
+                            cFiles[config.controllerHook].before(ctx)
                         }
                         log.d('--call controller--')
                         c[action](ctx)
-                        if(controllers[config.controllerHook].after){ //hook after
+                        if(cFiles[config.controllerHook].after){ //hook after
                             log.d('--onafter controller--')
-                            controllers[config.controllerHook].after(ctx)
+                            cFiles[config.controllerHook].after(ctx)
                         }                      
                     }else{ //404
                         log.d("action not exists -- "+ action)

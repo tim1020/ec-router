@@ -15,6 +15,7 @@ An auto router middleware for koa2 [中文版文档点这里](https://github.com
 
 4. hook before or after controller 
 5. hot reload config and controllers
+6. multi version api
 
 ## install
 
@@ -23,6 +24,11 @@ npm install ec-router --save
 ```
 
 or download from git  [https://github.com/tim1020/ec-router]
+
+## URI format
+
+```http://domain[:port]/[prefix]/[apiver]/path```
+
 
 ## route type
 
@@ -78,10 +84,7 @@ process.env.NODE_ENV = 'dev' //open debug log
 app.use(bodyParser())
 
 //change default config
-ecRouter.setConfig({
-    type:1,
-    allowMethod:['Get','POST']
-})
+ecRouter.loadConfig('/home/code/koa/ec-config.js')
 app.use(ecRouter.dispatcher())
 
 //use other middleware
@@ -100,6 +103,8 @@ ec-router support hot reload config and controller, if you want to use this feat
 > put controller file into [AppRoot]/controllers/ 
 	
 	(can modify in config)
+
+if set **apiVer = true** in config, you should make a ver dir on controllers, eg. /v1/res => controllers/v1/res.js  
 
 > controller filename、action Uri and table resource Name is Case Sensitive 
 
@@ -150,6 +155,9 @@ module.exports = {
 
 > "_hook" can be modify use confing **[controllerHook]** 
 
+> _hook.js for all version
+
+
 
 ### config
 
@@ -163,6 +171,8 @@ module.exports = {
     uriAParam       : 'a',              //action param key,effective when type=3
     uriPrefix       : '',               //the Uri prefix,eg. [/api]/resource,if set,start with "/"
     uriDefault      : '/index',         //reset Uri when path="/"
+    apiVer          : false,            //support apiver
+    apiVeRegex      : /^v?(\d){1,2}(\.[\d]{1,2})?$/, //api ver rule,
     controllerPath  : 'controllers',    //set controller files path (relative app root)
     controllerHook  : '_hook',			//controller hook name
 	allowMethod     : ['get','post','put','delete'] //allowed request method whitelist
