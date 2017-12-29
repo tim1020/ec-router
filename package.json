@@ -1,7 +1,7 @@
 {
   "name": "ec-router",
-  "version": "1.1.0",
-  "description": "An auto router and auto RESTful middlewware for koa2    ####### 自动化的koa路由中间件，支持MVC模式，直接根椐请求路径路由到指定的controller，同时支持基于MYSQL或mongoDB的自动RESTful服务，无需编写业务代码",
+  "version": "1.2.0",
+  "description": "一个koa2自动路由中间件，直接根椐请求方法及路径路由到指定的controller。无需人工编写路由表或映射",
   "main": "index.js",
   "scripts": {
     "test": "mocha --harmony --reporter spec"
@@ -12,16 +12,16 @@
   },
   "keywords": [
     "koa",
+    "koa2",
+    "路由中间件",
     "middleware",
     "router",
     "route",
     "auto route",
     "RESTful",
-    "auto RESTful",
-    "mvc",
-    "controller",
-    "mysql",
-    "mongodb"
+    "自动路由",
+    "路由",
+    "controller"
   ],
   "author": "Tim <tim8670@gmail.com>",
   "license": "MIT",
@@ -29,11 +29,7 @@
     "url": "https://github.com/tim1020/ec-router/issues"
   },
   "homepage": "https://github.com/tim1020/ec-router#readme",
-  "dependencies": {
-    "mongodb": "^2.2.29",
-    "mysql": "^2.13.0",
-    "sqlstring": "^2.2.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "koa": "^2.2.0",
     "mocha": "^2.0.1",

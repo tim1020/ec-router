@@ -1,69 +1,113 @@
 # ec-router [![License](https://img.shields.io/badge/license-MIT-blue.svg)](http://opensource.org/licenses/MIT)
 
-An auto router middleware for koa2 [中文版文档点这里](https://github.com/tim1020/ec-router/blob/master/README_CN.md)
+一个简单易用的koa2路由中间件，提供规则路由功能，不再需要复杂无趣的路由文件，路由影射表等。
+
 
 ## feature
 
-1. router middleware for koa2
-2. auto route
-    
-    route by rule of uri, route file、mapper table is No longer needed 
-    
-3. auto RESTful service
-    
-    build  RESTful Api server auto, use mysql or mongeodb
+1. koa2路由中间件
 
-4. hook before or after controller 
-5. hot reload config and controllers
-6. multi version api
+2. 根椐请求方法及URI进行自动路由
+
+3. 控制器钩子，支持before,after,error
+
+4. 配置文件及控制器热重载
+
+## change log
+
+如果你之前使用过ec-router，请注意新版本为了保持router的功能单一性，相对旧版本，作了比较大的简化，修改如下：
+
+1. 去掉了自动装载数据库进行自动RESTful的功能,如果你需要此功能，请参考本文档后面的使用例子。
+
+2. 增加_any控制器，处理无法匹配的的resource
+
+3. 在hook中增加error方法，处理路由过程抛出的错误
+
+4. 默认的控制器方法名称由all改为any
+
+5. 将resource、resourceId和action注入到 ctx.ecRouter
 
 ## install
 
 ```
 npm install ec-router --save
+npm test
+
 ```
 
-or download from git  [https://github.com/tim1020/ec-router]
+也可从 [git仓库](https://github.com/tim1020/ec-router) 中下载源码，放到你项目的node_modules目录
 
-## URI format
+## URI格式说明
 
-```http://domain[:port]/[prefix]/[apiver]/path```
+```
+ http://domain[:port]/[prefix]/[apiver]/path
+ ```
+
+
+**[prefix]** : 表示路径前缀（可为空），可在config中设置
+
+**[apiver]** : 表示api的版本，在config中设置 apiVer 为true时生效，
+版本规则由apiVeRegex定义，默认规则为两位版本号，比如v1.0,v11,v2,11,12.22
+
+**path** : 为具体资源路径，根椐不同的路由类型有不同
+
+
+ec-router根椐请求的方法、路径或查询参数，自动分析得出controller(resource)和action，再调用相应的方法来处理。
+
+如果对应的controller没有找到，会在controllers目录查找_any.js来代替（使用者可在此控制器内用_any方法来实现自动处理RESTful请求）
+
+如果对应的action没有找到，则查找_any方法代替。
+
+如果都找不到，则抛出异常，进入_hook的error方法处理（如果有的话）
 
 
 ## route type
 
-### [RESTful] type=1
+### type=1, RESTful方式
 
-route by Uri and request method like **RequestMethod /res/[:resourceId]**
+本方式使用RESTful访问，根椐请求方法和请求的资源名称、ID来处理，比如：
 
-**/res** is resource name (table name or mongodb's collection with [tbPrefix])
+```
+GET /res/12    // => controller=res,method=get
+POST /User     // => controller=user,method=post
+PUT /user/11   // => controller=user,method=put
+```
 
-**RequestMethod** as controller action,like get,post,put,delete etc.
-
-**eg.**
-
-**[GET /res]**  route to controller=res.js ,  method=get
-
-**[POST /user]** rote to controller=user.js, method=post
-
-if controller not exists method named **[RequestMethod]**, then look for **[all]** method. 
+其中的"res"和"user"表示资源名称
 
 
-### [by Path] type=2
+### type=2,Path方式
 
-route by Path like **/controller/action**, if controller not exists method named **[action]**, then look for **[all]** method. 
+本方式根椐路径匹配控制器和控制器方法, path的格式为： /controller/action
 
-**[/User/list]**  route to controller=User.js,method=list 
 
-**[/User/add]**  route to controller=User.js,method=add
+如:
 
-### [by QueryString] type=3
+```
+/res/list      // => controller=res, method=list
+/user/add      // => controller=user, method=add
+/user          // => controller=user, method=any
+```
 
-route by QueryString like **/apiName?c=controller&a=action**, if controller not exists method named **[action]**, then look for **[all]** method. 
 
-**[/?c=User&a=list]**  route to controller=User.js,method=list 
+该方法不区分请求方法，可在实现控制器时根椐需求自行判断
 
-**[/?c=User&a=add]**  route to controller=User.js,method=add
+
+### type=3,QueryString方式
+
+本方式使用请求字符串进行路由判断，比如：**/apiName?c=controller&a=action**,查找controller及action的方式同type=2
+
+(其中c,a为参数名称，可在config中修改)
+
+如：
+
+```
+/index?c=user&a=list  // => controller=uer, method=list 
+/index?c=user&a=add   // => controller=user, method=add
+/index?c=user&a=      // => controller=user, method=any
+```
+
+此方法同样不区分请求方法，可在实现控制器时根椐需求自行判断
 
 
 ## Usage
@@ -77,14 +121,14 @@ const Koa = require('koa')
 const app = new Koa()
 const ecRouter = require('ec-router')
 
-process.env.NODE_ENV = 'dev' //open debug log
+process.env.NODE_ENV = 'dev' //开启debug log
 
-//use other middleware
-//if need auto RESTful service, bodyParser is required before ec-router
+//加载其它中间件
+//如果需要自动RESTful服务，需要使用bodyParser之类的请求内容解释中间件来预处理请求参数
 app.use(bodyParser())
 
-//change default config
-ecRouter.loadConfig('/home/code/koa/ec-config.js')
+//修改ec-router的默认配置
+ecRouter.loadConfig(__dirname+'/ec-config.js')
 app.use(ecRouter.dispatcher())
 
 //use other middleware
@@ -93,175 +137,134 @@ app.listen(3000)
 
 ```
 
-### hot reload
+### 热加载
 
-ec-router support hot reload config and controller, if you want to use this feature, set ```hotLoad=true``` (default), and write a config module ,then use ```ecRouter.loadConfig('./config.js')``` replace ```ecRouter.setConfig(conf)```
+当在配置文件中设置了hotLoad=true(缺省值)时，ec-router支持配置文件及controller的热加载(hotLoad配置的修改不支持热更新)
 
+如果需要使用热加载，请将配置独立成模块，再使用 ```ecRouter.loadConfig('./config.js')``` 代替 ```ecRouter.setConfig(conf)```
 
 ### controller
 
-> put controller file into [AppRoot]/controllers/ 
-	
-	(can modify in config)
+ec-router通过dispatch将不同的请求路由到不同的控制器方法，默认地，需要将控制器文件放置在APP根目录下的controllers目录（可在配置中修改)
 
-if set **apiVer = true** in config, you should make a ver dir on controllers, eg. /v1/res => controllers/v1/res.js  
 
-> controller filename、action Uri and table resource Name is Case Sensitive 
+1. 控制器文件名、控制器方法、资源名称等大小写敏感
+
+2. 控制器方法的函数原型是 async (ctx) =>{} 
+
+3. type=1时,使用get,post,put,delete来命名对应的控制器方法，type非1时，可以自行定义（对应path或querystring中的action命称），可以定义_any方法来适配不存在的方法。
+
 
 ```
-//user.js
+
+// controllers/user.js
 module.exports = {
-    get : (ctx) => {
-		//ctx.req.resourceId  //effective when type=1,
+    get : async (ctx) => {
+        //ctx.req.resourceId  //effective when type=1,
         //ctx.req.resource
         ctx.body = "get User"
     },
-    post: (ctx) => {
+    post: async (ctx) => {
         ctx.body = "post user"
     },
-    //You can call an other action use ctx.go()
-    go: (ctx) => {
-        //ctx.go('user','get') //ctx.go('controller','action')
-        ctx.go('get') //ctx.go('action')
-
-        //other code will go on
-    },
-    //method "all" will match all of action
-    all: (ctx) => {
+    //当action无法匹配以上方法时，会自动匹配为all方法
+    any: async (ctx) => {
         //other method
     }
 }
-```
-
-
-### controller hook
-
-if you want to do something before or after every controller action, build a hook controller name  "_hook.js", and exported method "before"、"after" 
 
 ```
-//_hook.js
+
+### api version
+
+对于是否应该在URI中添加api的version，不同的人有不同的看法，ec-router建议的方式在你需要版本控制时，在URI中添加。
+
+1. 配置中设置 apiVer为true
+2. 需在controllers目录下创建版本目录，并将控制文件放到相应的版本目录，如 : 路径/v1/res，会路由到 controllers/v1/res.js。
+
+> 如果你希望使用Access的media type或其它header来控制版本，可以在_any控制器的_any方法中判断并import相应的版本
+
+
+### 通用controller
+
+#### before和after钩子
+
+如果需要在每个控制器方法执行之前或之行都执行一些逻辑，可以使用钩子，方法是：
+
+1. 在 controllers目录下放置控制器钩子,文件名为 _hook.js
+2. 在_hook.js中实现并导出before或after方法(可同时或单独前后添加钩子)
+
+
+```
 module.exports = {
     //do before all controller action
-    before : (ctx) => {
-        console.log('controller start')
+    before : async (ctx) => {
+        ctx.set("Access-Control-Allow-Origin", "*") 
+        ctx.set("Access-Control-Allow-Headers", "Origin, Content-Type") 
     },
 
     //do after all controller action
-    after: (ctx) => {
+    after: async (ctx) => {
         console.log('controller finish')
+    },
+    //路由时抛错的处理
+    error: async(ctx,err) =>{
+
+    }
+}
+```
+
+注意：只有控制器能正常执行，before和after才能被执行，如果在调用控制器之前抛错或返回了，before和after也不会执行。
+
+#### 默认控制器
+
+当找不到指定的controller时，ec-router会去查找controller目录下的_any.js作为默认控制器。
+
+使用该特性，可以实现自动的RESTful服务:
+
+```
+//_any.js
+module.exports = {
+    get : async (ctx) => {
+        //根椐ctx.ecRouter.resource ，ctx.ecRouter.resourceId及其它query参数自动从数据库获取内容输出
+    },
+    post: async (ctx) => {
+        //实现更新数据
     },
 }
 ```
 
-> "_hook" can be modify use confing **[controllerHook]** 
+#### 错误控制器
 
-> _hook.js for all version
-
-
+在碰到无法正常处理的请求时，ec-router会抛出异常，并在最后catch这些异常，传递给_hook.js控制器的error方法处理（如果没有则只输出到控制台）
 
 ### config
 
-> You can change default config by ***ecRouter.setConfig*** method
+可以在调用ec-router.dispatcher之前使用loadConfig来修改默认配置（config文件只需定义不使用默认值的项）
 
 ```
 {
-    type            : 1,                //route type 1(by requestMethod Uri),2 (by path),3 (by querystring)
-    uriApiName      : 'index',          //apiname?c=xx&a=x ,effective when type=3
-    uriCParam       : 'c',              //controller param key, effective when type=3
-    uriAParam       : 'a',              //action param key,effective when type=3
-    uriPrefix       : '',               //the Uri prefix,eg. [/api]/resource,if set,start with "/"
-    uriDefault      : '/index',         //reset Uri when path="/"
-    apiVer          : false,            //support apiver
-    apiVeRegex      : /^v?(\d){1,2}(\.[\d]{1,2})?$/, //api ver rule,
-    controllerPath  : 'controllers',    //set controller files path (relative app root)
-    controllerHook  : '_hook',			//controller hook name
-	allowMethod     : ['get','post','put','delete'] //allowed request method whitelist
-    tbPrefix        : 'res_',           //the tableName prefix of RESTful service's resrouce
-    dbConf          : {                 //auto RESTful service db
-        driver: 'mysql',				//mysql or mongodb
-        connectionLimit : ,
-        host            : '',
-        port            : ,
-        user            : '',
-        password        : '',
-        database        : ''
-    }
-    //see [mysql pool](https://github.com/mysqljs/mysql#pool-options) for more
-}
-
-
-```
-
-## auto RESTful service
-
-if need auto RESTful service, set config of:
-
-```
-type:1
-dbConf:{
-    
+    type            : 1,                //路由方式
+    uriApiName      : 'index',          //使用querystring方式时，指定API文件名，即/apiName?c=xx&m=xx
+    uriCParam       : 'c',              //使用querystring方式时，指定控制器的参数名
+    uriAParam       : 'a',              //使用querystring方式时，指定控制器方法的参数名
+    uriPrefix       : '',               //API路径前缀，如: /prefix/controller/action
+    uriDefault      : '/index',         //默认uri
+    apiVer          : false,            //是否支持版本声明
+    apiVeRegex      : /^v?(\d){1,2}(\.[\d]{1,2})?$/, //版本规则,
+    controllerPath  : 'controllers',    //控制器文件所在目录，相对于app根目录
+    allowMethod     : ['get','post','put','delete','options'] //允许的请求方法
 }
 ```
 
-the RESTful request handle:
+### 数据访问
 
-1. search controller and action, exec this action and return if found
-2. If not found, build SQL by request param、request method、querystring ,then exec this SQL and return results
+ec-router并不包括数据访问的处理，以下只是一些建议：
 
-SQL build examples :
-
-**[GET /task]**  
-
-SELECT * FROM res_task
-
-**[GET /task/12]** 
-
-SELECT * FROM res_task WHERE id=12
-
-**[POST /task]**
-
-INSERT INTO res_task SET k=v,k=v (k,v is the request.body key paris)
-
-**[PUT /task/12]**
-
-UPDATE res_task SET k=v,k=v WHERE id=12
-
-**[DELETE /task/12]**
-
-DELETE res_task WHERE id=12
-
-
-> PUT,DELETE must set /resurce/[:resourceId]
-
-> PUT,POST need request.body key paris, so you need to use bodyParser before ec-router
-
-
-
-GET can set WHERE,ORDER,LIMIT,FIELDS by querystring like:
-
-```
-GET /task/?where=xxx&order=xxx&limit=xxx
-
-```
-
->
-
-> order=field1,field2 desc
-
-> limit=[offset,]nums  //if not limit,default 100 is set
-
-> fields=a,b alias_b,c as alias_c   //alias only for mysql
-
-
->where="cond1 and cond2 [or] cond3 [and] cond4 or cond5" // (cond1 and cond2) or cond3 and (cond4 or cond5)
-
-> for mongodb,where=cond1,cond2,cond3 // "，" means "and"
-
-
+1. 通过koa的middleware,建立一个数据连接的中间件，将连接句柄注入 ctx.dbconn，然后可以在controller中使用
+2. 通过_hook的before建立数据连接获取，注入ctx.dbconn
+3. 建立dao基类，然后在其之前实现各对象的dao,直接使用dao调用
 
 ## License
 
 MIT is open-sourced software licensed under the [MIT license](http://opensource.org/licenses/MIT).
-
-##
-Forgot my ugly english, and enjoy it~!

@@ -9,4 +9,10 @@ module.exports = {
         ctx.myHeader += '_after'
         ctx.set('_hook',ctx.myHeader)
     },
+
+    error:(ctx,err) =>{
+    	ctx.status = err.code
+    	ctx.body = err.error
+    	//console.log(err)
+    }
 }

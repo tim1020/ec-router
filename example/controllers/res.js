@@ -1,11 +1,11 @@
 module.exports = {
-    get : (ctx) => {
+    get : async (ctx) => {
         ctx.body = "hello, from [/res/get] or [GET /res]"
     },
-    lst : (ctx) => {
-        ctx.go('get')
+    lst : async (ctx) => {
+
     },
-    all:(ctx) => {
-        //match all other,if need auto RESTful,reomve this action
+    _any: async (ctx) => {
+        //match any other,if need auto RESTful,reomve this action
     }
 }

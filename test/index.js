@@ -3,11 +3,11 @@ const req     = require('supertest')
 const assert = require('assert')
 const Koa = require('koa')
 
-const init = (type) => {
+var init = (type, apiName='index') => {
   let app = new Koa()
   let bodyParser = require('koa-bodyparser')
   app.use(bodyParser())
-  let conf   = {controllerPath:'example/controllers',type: type}
+  let conf   = {controllerPath:'example/controllers',type: type, uriApiName:apiName}
   let ecRouter = require('../index')  
   ecRouter.setConfig(conf)
   app.use(ecRouter.dispatcher())
@@ -49,7 +49,11 @@ describe('ec-router', function () {
     });
     it('get /null 404', function(done){
       api.get('/null')
-      .expect(404,done)
+      .expect(200)
+      .end((_,res)=>{
+        assert.equal(res.text, 'any')
+        done()
+      })
     });
   })
 
@@ -76,17 +80,21 @@ describe('ec-router', function () {
       api.post('/users/get')
       .expect(200,done)
     });
-    it('get /users/allother 200', function(done){
-      api.get('/users/allother')
+    it('get /users/any_other 200', function(done){
+      api.get('/users/any_other')
       .expect(200,done)
     });
-    it('patch /users/all 405', function(done){
-      api.patch('/users/all')
+    it('patch /users/any 405', function(done){
+      api.patch('/users/_any')
       .expect(405,done)
     });
     it('get /null/get 404', function(done){
-      api.get('/null/all')
-      .expect(404,done)
+      api.get('/null/_any')
+      .expect(200)
+      .end((_,res)=>{
+        assert.equal(res.text, 'any')
+        done()
+      })
     });
     it('_hook', function(done){
       api.get('/users/get')
@@ -123,17 +131,42 @@ describe('ec-router', function () {
       api.post('/?c=users&a=get')
       .expect(200,done)
     });
-    it('get /?c=users&a=allother 200', function(done){
+    it('get /?c=users&a=any_other 200', function(done){
       api.get('/?c=users')
       .expect(200,done)
     });
-    it('patch /?c=users&a=allother 405', function(done){
-      api.patch('/?c=users&a=allother')
+    it('patch /?c=users&a=any_other 405', function(done){
+      api.patch('/?c=users&a=any_other')
       .expect(405,done)
     });
-    it('get /?c=null&a=allother 404', function(done){
-      api.get('/?c=null&a=allother')
-      .expect(404,done)
+    it('get /?c=null&a=any_other 200 any', function(done){
+      api.get('/?c=null&a=any_other')
+      .expect(200)
+      .end((_,res)=>{
+        assert.equal(res.text, 'any')
+        done()
+      })
+    });
+  });
+
+  describe('onError', function(){
+   
+    it('get /api?c=users&a=get ok', function(done){
+      api = init(3,'api')
+      api.get('/api?c=users&a=get')
+      .expect(200)
+      .end((_,res)=>{
+        assert.equal(res.text, 'get_users')
+        done()
+      })
+    });
+    it('get /index?c=users&a=post fail', function(done){
+      api.get('/index?c=users&a=post')
+      .expect(404)
+      .end((_,res)=>{
+        assert.equal(res.text, 'Not Found: miss api name')
+        done()
+      })
     });
   })
 

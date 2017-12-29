@@ -16,7 +16,7 @@ ecRouter.setConfig({
 })
 */
 
-ecRouter.loadConfig('./ec-config.js')
+ecRouter.loadConfig(__dirname+'/ec-config.js')
 app.use(ecRouter.dispatcher())
 
 app.listen(3000)

@@ -1,4 +1,4 @@
 module.exports = {
-    type: 2,
-    uriApiName:'index',
+    type: 3,
+    uriApiName:'api',
 }

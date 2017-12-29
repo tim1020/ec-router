@@ -6,14 +6,13 @@
 
 const log         = require('./log')
 const controller  = require('./controller')
-const mysql       = require('mysql')
 const fs          = require('fs');
 
 //default config
 let config = {
     /**
      * route type
-     * 1(default) [Auto RESTful] -- [GET/POST/PUT/DELETE] /uriPrefix/resourceName/[resourceId]
+     * 1(default) [RESTful] -- [GET/POST/PUT/DELETE] /uriPrefix/resourceName/[resourceId]
      * 2 [Path] -- /uriPrefix/controllerName/actionName
      * 3 [QueryString] -- /uriPrefix/uriApiName?c=controllerName&a=actionName (use uriCParam,uriAParam set param key)
      */
@@ -26,30 +25,12 @@ let config = {
     apiVer          : false, //api version required ?
     apiVeRegex      : /^v?(\d){1,2}(\.[\d]{1,2})?$/, //api version regex
     controllerPath  : 'controllers', //set controller files path (relative app root), default is 'controllers'
-    controllerHook  : '_hook', //controller hook name
-    allowMethod     : ['get','post','put','delete'],
-    tbPrefix        : 'res_',
-    /**
-     * db config,set if need auto RESTful service 
-     * @type {[object]}
-     * {
-     *  driver: 'mysql' 
-     *  //other conf see driver package
-     *  connectionLimit : ,
-     *   host            : '',
-     *   port            : ,
-     *   user            : '',
-     *   password        : '',
-     *   database        : ''
-     * }
-     */
-    dbConf          : {},
+    allowMethod     : ['get','post','put','delete','options'],
     hotLoad         : true
 }
 
 class EcRouter {
-    constructor(){
-    }
+    constructor(){}
     //modify default config
     setConfig(conf){
         log.d("--setConfig--")
@@ -95,7 +76,7 @@ class EcRouter {
     dispatcher(){
         log.d("--dispatcher--")
         if([1,2,3].indexOf(config.type) == -1){ //not supported type,throw error
-            throw new Error('route type unexpected',500);
+            throw new Error('route type unexpected');
         }
         let apiVerRegex = null
         
@@ -112,179 +93,110 @@ class EcRouter {
                 }
             })
         }
-
-        let dbUtil = null
-
+        let controllers = cFiles
         return async (ctx, next) => {
             log.d("--on request--")
             log.d(config)
-               
-            let uri = ctx.request.path == '/' ? config.uriDefault : ctx.request.path
-            let reqMethod = ctx.request.method.toLowerCase()
-            log.d({method:reqMethod,uri:uri})
-            
-            if(uri.toLowerCase()  == '/favicon.ico'){
-                return
-            }
-
-            if(config.allowMethod.indexOf(reqMethod) == -1){ 
-                ctx.response.status  = 405
-                ctx.response.message = 'Method Not Allowed -- '+ ctx.request.method
-                log.d("method not allowed")
-                return
-            }
-
-            if(config.uriPrefix != ''){ //remove prefix if uriPrefix not empty
-                if(uri.indexOf(config.uriPrefix) !== 0){ //404 prefix not found
-                    log.d('uri prefix not exists -- '+ config.uriPrefix)
-                    return
-                }else{ 
-                    uri = uri.replace(config.uriPrefix,'')
+            try{
+                let uri = ctx.request.path == '/' ? config.uriDefault : ctx.request.path
+                let reqMethod = ctx.request.method.toLowerCase()
+                log.d({method:reqMethod,uri:uri})
+                
+                if(config.allowMethod.indexOf(reqMethod) == -1){ 
+                    log.d("method not allowed")
+                    throw {code:405,error:'method '+reqMethod+ ' not allowed'}
                 }
-            }
-            let controllers = cFiles
-            let path      = uri.split("/")
-            let apiVer    = ''
-            path.shift()
-            if(config.apiVer && config.apiVeRegex){
-                if(!config.apiVeRegex.test(path[0])){
-                    log.d("api version not match")
-                    ctx.response.message = 'api version not match'
+
+                if(reqMethod == 'options'){ //_hook not load yet
+                    ctx.status = 204
                     await next()
                     return
                 }
-                //test ok
-                apiVer = path.shift()
-                if(!cFiles[apiVer]){
-                    log.d("this version api not found")
-                    ctx.response.message = 'api not found, check version pls'
-                    await next()
-                    return
-                }
-                controllers = cFiles[apiVer]
-            }
-            log.d('api ver ='+apiVer)
-            let [resource, action] = path
-            //inter redirect
-            ctx.go = ( ...params) => {
-                log.d("ctx.go called, params="+params.join(","))
-                if(params.length == 1){
-                    action = params[0]
-                }else if(params.length == 2){
-                    resource = params[0]
-                    action   = params[1]
-                }else{
-                    throw new Error('ctx.go params error, except go(action) or go(control,action)',500);
-                }
-                if(controllers[resource]){ 
-                    let c = controllers[resource]
-                    if(c[action]){
-                        c[action](ctx)
-                        return
+
+                if(config.uriPrefix != ''){ //remove prefix if uriPrefix not empty
+                    if(uri.indexOf(config.uriPrefix) !== 0){ //404 prefix not found
+                        log.d('uri prefix not exists -- '+ config.uriPrefix)
+                        throw {code:404,error:'Not Found: uri prefix not exists'}
+                    }else{ 
+                        uri = uri.replace(config.uriPrefix,'')
                     }
                 }
-                log.d("ctx.go target not found -- controller="+resource+",action="+action)
-            }
-
-            if(config.type == 1){
-                log.d('--RESTful route--')
-                log.d({method:reqMethod,res:resource,resId:action})
-                let resourceId = action || 0
-                ctx.req.resourceId = resourceId //set resourceId
-                ctx.req.resource   = resource   //set resource
-
-                if(controllers[resource]){ 
-                    log.d("found controller file")
-                    let c = controllers[resource]
-
-                    if(c[reqMethod] || c.all){
-                        if(!c[reqMethod]){ //not reqMethod,match "all"
-                            log.d("reqMethod "+reqMethod+" rewrite to 'all'")
-                            reqMethod = 'all'
-                        }
-                        log.d("route ok")
-                        log.d({controller:resource,action:reqMethod})
-
-                        if(controllers[config.controllerHook].before){ //hook before
-                            log.d('--onbefore controller--')
-                            controllers[config.controllerHook].before(ctx)
-                        }
-                        log.d('--call controller action--')
-                        c[reqMethod](ctx)
-                        if(controllers[config.controllerHook].after){ //hook after
-                            log.d('--onafter controller--')
-                            controllers[config.controllerHook].after(ctx)
-                        }
-                        await next()
-                        return
-                    } 
-                }
-
-                log.d("custom controller not match")
-                if(config.dbConf.driver){ //auto RESTful on
-                    log.d("--Auto RESTful on "+config.dbConf.driver+"--")
-                    try{
-                        if(dbUtil == null){
-                            log.d("--db init--")
-                            log.d({dbconf:config.dbConf})
-                            dbUtil = await require('./dbUtil').init(config.dbConf)
-                            log.d("--db init finished--")
-                        }
-                        let tbName = config.tbPrefix + resource
-                        log.d('--query begin--')
-                        log.d({tbname:tbName})
-                        let data = await dbUtil.exec(reqMethod, tbName, resourceId, ctx.request)
-                        log.d('--query finished--')
-                        ctx.body = {code:0, data:data}
-                    }catch(e){
-                        log.d('sql error:'+ e.toString())
-                        //ctx.response.status = 500
-                        ctx.response.body = {code: "0x"+ e.errno, error:e.code}
+                let path        = uri.split("/")
+                let apiVer      = ''
+                path.shift()
+                if(config.apiVer && config.apiVeRegex){
+                    if(!config.apiVeRegex.test(path[0])){
+                        log.d("api version not match")
+                        throw {code:404,error:'Not Found: api version not match'}
                     }
+                    //test ok
+                    apiVer = path.shift()
+                    if(!cFiles[apiVer]){
+                        log.d("this version api not found")
+                        throw {code:404,error:'Not Found: api version not exists'}
+                    }
+                    controllers = cFiles[apiVer]
                 }
-            }else{ //Path or QueryString
-                if(config.type == 3){ //querystring,reParse resource,action
-                    if(path.length != 2 || resource != config.uriApiName){
+                log.d('api ver = '+apiVer)
+                let [resource, action] = path
+                let resourceId = 0
+                if(config.type == 1){
+                    log.d('--RESTful route--')
+                    log.d({res:resource,resId:action,action:reqMethod})
+                    resourceId = action || 0
+                    ctx.req.resourceId = resourceId //set resourceId
+                    ctx.req.resource   = resource   //set resource
+                    action = reqMethod
+                } else if(config.type == 3){ //querystring,reParse resource,action
+                    if(path.length != 1 || resource != config.uriApiName){
                         log.d('api name not exists -- '+ config.uriApiName)
-                        return
+                        throw {code:404,error:'Not Found: miss api name'}
                     }
                     let params = ctx.request.query
                     resource   = params[config.uriCParam] || ''
                     action     = params[config.uriAParam] || ''
                 }
-                log.d("--normal route type--")
-                log.d({resource:resource, action:action})
-                if(controllers[resource]){ 
-                    let c = controllers[resource]
-                    if(c[action] || c.all){
-                        if(!c[action]){ //action not found, rewrite to "all"
-                            log.d("action "+action+" not found, rewrite to 'all'")
-                            action = 'all'
+                ctx.ecRouter = {resource,action,resourceId}
+
+                let c = controllers[resource] || controllers['_any']
+                if(c != undefined){ 
+                    log.d("found controller file: "+ ( controllers[resource]? resource:  '_any'))
+                    if(c[action] || c._any){
+                        if(!c[action]){ //not action,match "all"
+                            log.d('forward to action: _any')
+                            action = '_any'
                         }
                         log.d("route ok")
                         log.d({controller:resource,action:action})
-                        if(cFiles[config.controllerHook].before){ //hook before
+
+                        if(controllers['_hook'].before){ //hook before
                             log.d('--onbefore controller--')
-                            cFiles[config.controllerHook].before(ctx)
+                            await controllers['_hook'].before(ctx)
                         }
-                        log.d('--call controller--')
-                        c[action](ctx)
-                        if(cFiles[config.controllerHook].after){ //hook after
+                        log.d('--call controller action--')
+                        await c[action](ctx)
+                        if(controllers['_hook'].after){ //hook after
                             log.d('--onafter controller--')
-                            cFiles[config.controllerHook].after(ctx)
-                        }                      
-                    }else{ //404
-                        log.d("action not exists -- "+ action)
+                            await controllers['_hook'].after(ctx)
+                        }
+                        await next()
+                        log.d('--request finished--')
+                        return
                     }
-                }else{
-                    log.d("controller not exists -- " + resource)
                 }
-                //Path and QueryString not support auto service
+                throw {code:404,error:'Not Found: controller or action not found'}
+            } catch(err) {
+                log.d('exception: '+err)
+                if(controllers['_hook'].error){
+                    await controllers['_hook'].error(ctx,err)
+                }
+                await next()
+                log.d('--request finished--')
+                return
             }
-            await next()
         }
     }
 }
 
 
-module.exports = new EcRouter(config)
+module.exports = new EcRouter()

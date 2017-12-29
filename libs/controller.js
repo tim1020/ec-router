@@ -23,7 +23,7 @@ const addControlFile = (dir,f,ver) =>{
 //todo: 下层目录，区分不同版本
 exports.load = function (directory) {
     log.d("--loadController--")
-    log.d({dir: directory})
+    log.d("controller dir="+ directory)
     let files = fs.readdirSync(directory);
     files.forEach((filename) => {
         let fullname = path.join(directory,filename)
@@ -37,9 +37,13 @@ exports.load = function (directory) {
         }
         else addControlFile(directory,filename)
     });
-
-
-    log.d(result)
+    log.d("--(files => actions)--")
+    for(let c in result){
+        let actions = Object.keys(result[c])
+        log.d(c+"\t=> "+actions)
+        //let k = Object.keys(result[c])
+        //log.d(k)
+    }
     
     return result
 };
