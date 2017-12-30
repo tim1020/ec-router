@@ -17,13 +17,13 @@
 
 如果你之前使用过ec-router，请注意新版本为了保持router的功能单一性，相对旧版本，作了比较大的简化，修改如下：
 
-1. 去掉了自动装载数据库进行自动RESTful的功能,如果你需要此功能，请参考本文档后面的使用例子。
+1. 去掉了自动装载数据库进行自动RESTful的功能,如果你需要此功能，请参考本文档后面的使用例子自行实现。
 
 2. 增加_any控制器，处理无法匹配的的resource
 
 3. 在hook中增加error方法，处理路由过程抛出的错误
 
-4. 默认的控制器方法名称由all改为any
+4. 默认的控制器方法名称由all改为_any
 
 5. 将resource、resourceId和action注入到 ctx.ecRouter
 
@@ -90,7 +90,7 @@ PUT /user/11   // => controller=user,method=put
 ```
 
 
-该方法不区分请求方法，可在实现控制器时根椐需求自行判断
+该方式不区分请求方法，可在实现控制器时根椐需求自行判断
 
 
 ### type=3,QueryString方式
@@ -167,8 +167,8 @@ module.exports = {
     post: async (ctx) => {
         ctx.body = "post user"
     },
-    //当action无法匹配以上方法时，会自动匹配为all方法
-    any: async (ctx) => {
+    //当action无法匹配以上方法时，会自动匹配为此方法
+    _any: async (ctx) => {
         //other method
     }
 }
@@ -182,17 +182,19 @@ module.exports = {
 1. 配置中设置 apiVer为true
 2. 需在controllers目录下创建版本目录，并将控制文件放到相应的版本目录，如 : 路径/v1/res，会路由到 controllers/v1/res.js。
 
-> 如果你希望使用Access的media type或其它header来控制版本，可以在_any控制器的_any方法中判断并import相应的版本
+> 如果你希望使用Accept的media type或其它header来控制版本，可以在_any控制器的_any方法中，判断并依靠获得的版本号及注入到ctx.ecRouter的resource,action来require相应版本的控制器
 
 
 ### 通用controller
+
+> 通用controller需要使用者自行定义并放置在controller目录，该节说明通用控制器的用途及实现方法。
 
 #### before和after钩子
 
 如果需要在每个控制器方法执行之前或之行都执行一些逻辑，可以使用钩子，方法是：
 
 1. 在 controllers目录下放置控制器钩子,文件名为 _hook.js
-2. 在_hook.js中实现并导出before或after方法(可同时或单独前后添加钩子)
+2. 在_hook.js中实现并导出before或after方法(可同时或单独前后添加钩子)，方法原型与普通controller方法一样
 
 
 ```
@@ -249,7 +251,7 @@ module.exports = {
     uriCParam       : 'c',              //使用querystring方式时，指定控制器的参数名
     uriAParam       : 'a',              //使用querystring方式时，指定控制器方法的参数名
     uriPrefix       : '',               //API路径前缀，如: /prefix/controller/action
-    uriDefault      : '/index',         //默认uri
+    uriDefault      : '/index',         //默认uri path
     apiVer          : false,            //是否支持版本声明
     apiVeRegex      : /^v?(\d){1,2}(\.[\d]{1,2})?$/, //版本规则,
     controllerPath  : 'controllers',    //控制器文件所在目录，相对于app根目录
@@ -261,10 +263,14 @@ module.exports = {
 
 ec-router并不包括数据访问的处理，以下只是一些建议：
 
-1. 通过koa的middleware,建立一个数据连接的中间件，将连接句柄注入 ctx.dbconn，然后可以在controller中使用
+1. 通过koa的middleware,建立一个数据连接的中间件，建立和获取连接，并将连接句柄注入为ctx.dbconn，然后可以在controller中使用
 2. 通过_hook的before建立数据连接获取，注入ctx.dbconn
-3. 建立dao基类，然后在其之前实现各对象的dao,直接使用dao调用
+3. 建立dao基类，然后在其之上实现各对象的dao,直接使用dao调用
 
 ## License
 
 MIT is open-sourced software licensed under the [MIT license](http://opensource.org/licenses/MIT).
+
+## Author
+
+Tim<tim8670@gmail.com>
